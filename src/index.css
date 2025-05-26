@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  [contenteditable] {
+    outline: none;
+  }
+  
+  [contenteditable][placeholder]:empty:before {
+    content: attr(placeholder);
+    color: #9ca3af;
+    pointer-events: none;
+  }
+}
+
+@layer components {
+  .prose {
+    @apply text-gray-900;
+  }
+  
+  .prose h1 {
+    @apply text-2xl font-bold mb-4 mt-6;
+  }
+  
+  .prose h2 {
+    @apply text-xl font-bold mb-3 mt-5;
+  }
+  
+  .prose p {
+    @apply mb-4;
+  }
+  
+  .prose blockquote {
+    @apply pl-4 border-l-4 border-gray-300 italic my-4
+  }
+  
+  .prose ul {
+    @apply list-disc pl-5 mb-4
+  }
+  
+  .prose ol {
+    @apply list-decimal pl-5 mb-4
+  }
+  
+  .prose a {
+    @apply text-[#F98B3D] hover:text-[#e07a2c] underline
+  }
+}
