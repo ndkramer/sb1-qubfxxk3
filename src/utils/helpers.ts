@@ -2,10 +2,10 @@
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
-): (...args: Parameters<T>) => void {
+): { (...args: Parameters<T>): void; cancel?: () => void } {
   let timeout: NodeJS.Timeout;
 
-  return function executedFunction(...args: Parameters<T>) {
+  const debouncedFn = function executedFunction(...args: Parameters<T>) {
     const later = () => {
       clearTimeout(timeout);
       func(...args);
@@ -14,4 +14,10 @@ export function debounce<T extends (...args: any[]) => any>(
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
+  
+  debouncedFn.cancel = () => {
+    clearTimeout(timeout);
+  };
+  
+  return debouncedFn;
 };

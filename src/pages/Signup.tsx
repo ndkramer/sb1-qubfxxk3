@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../utils/authContext';
-import { BookOpen, AlertCircle } from 'lucide-react';
+import { BookOpen, AlertCircle, Loader2 } from 'lucide-react';
 import Alert from '../components/Alert';
 
 const Signup: React.FC = () => {
@@ -18,6 +18,18 @@ const Signup: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Validate inputs
+    if (!email || !password || !name) {
+      setError('All fields are required');
+      return;
+    }
+    
+    if (!email || !password || !name) {
+      setError('All fields are required');
+      return;
+    }
+
     setIsLoading(true);
 
     if (password.length < 8) {
@@ -29,12 +41,23 @@ const Signup: React.FC = () => {
     try {
       const { success, error: signupError } = await signup(email, password, name);
       if (success) {
-        navigate('/login', { 
-          state: { 
-            from,
-            message: 'Account created successfully! Please log in.' 
-          } 
-        });
+        // Handle success with or without email confirmation
+        if (signupError?.includes('check your email')) {
+          navigate('/login', {
+            state: {
+              from,
+              message: signupError
+            }
+          });
+        } else {
+          // Direct login if no email confirmation required
+          navigate('/login', {
+            state: {
+              from,
+              message: 'Account created successfully! Please log in.'
+            }
+          });
+        }
       } else {
         setError(signupError || 'Failed to create account');
       }
@@ -126,10 +149,11 @@ const Signup: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full py-2 px-4 bg-[#F98B3D] hover:bg-[#e07a2c] text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F98B3D] transition-colors duration-200 ${
+                className={`w-full py-2 px-4 bg-[#F98B3D] hover:bg-[#e07a2c] disabled:hover:bg-[#F98B3D] text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F98B3D] transition-colors duration-200 flex items-center justify-center ${
                   isLoading ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
               >
+                {isLoading && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
                 {isLoading ? 'Creating Account...' : 'Create Account'}
               </button>
             </div>

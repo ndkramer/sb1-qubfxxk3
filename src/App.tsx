@@ -1,21 +1,23 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './utils/authContext';
+import { AdminProvider } from './utils/adminContext';
 import { ClassProvider } from './utils/classContext';
 import { ModuleProvider } from './utils/moduleContext';
 import { NoteProvider } from './utils/noteContext';
-import ErrorBoundary from './components/ErrorBoundary';
-import LoadingSpinner from './components/LoadingSpinner';
-import Layout from './components/Layout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminLayout from './pages/admin/AdminLayout';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import ClassList from './pages/ClassList';
 import ClassDetail from './pages/ClassDetail';
 import ModuleDetail from './pages/ModuleDetail';
 import Profile from './pages/Profile';
+import Layout from './components/Layout';
+import LoadingSpinner from './components/LoadingSpinner';
 
-// Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
   
@@ -39,6 +41,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/" element={<Layout />}>
         <Route index element={<Navigate to="/dashboard\" replace />} />
         <Route path="/dashboard" element={
@@ -67,26 +70,28 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard\" replace />} />
+      <Route path="*" element={
+        <ProtectedRoute>
+          <Navigate to="/dashboard\" replace />
+        </ProtectedRoute>
+      } />
     </Routes>
   );
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <ErrorBoundary>
+    <Router>
+      <AuthProvider>
         <ClassProvider>
           <ModuleProvider>
             <NoteProvider>
-              <Router>
-                <AppRoutes />
-              </Router>
+              <AppRoutes />
             </NoteProvider>
           </ModuleProvider>
         </ClassProvider>
-      </ErrorBoundary>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

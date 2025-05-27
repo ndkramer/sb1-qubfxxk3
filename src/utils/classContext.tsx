@@ -23,6 +23,13 @@ export function ClassProvider({ children }: { children: React.ReactNode }) {
 
   const loadEnrolledClasses = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setEnrolledClasses([]);
+        return;
+      }
+
       const { data: enrollments, error: enrollmentError } = await supabase
         .from('enrollments')
         .select(`
@@ -41,11 +48,18 @@ export function ClassProvider({ children }: { children: React.ReactNode }) {
               title,
               description,
               slide_url,
-              order,
-              resources (*)
+              "order",
+              resources (
+                id,
+                title,
+                type,
+                url,
+                description
+              )
             )
           )
         `)
+        .eq('user_id', user.id)
         .eq('status', 'active');
 
       if (enrollmentError) throw enrollmentError;
@@ -56,12 +70,13 @@ export function ClassProvider({ children }: { children: React.ReactNode }) {
         .sort((a, b) => {
           const dateA = new Date(a.schedule_data?.startDate || '');
           const dateB = new Date(b.schedule_data?.startDate || '');
-          return dateA.getTime() - dateB.getTime();
+          return dateB.getTime() - dateA.getTime();
         });
 
       setEnrolledClasses(classes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load enrolled classes');
+      console.error('Error loading classes:', err);
     } finally {
       setIsLoading(false);
     }
@@ -74,9 +89,16 @@ export function ClassProvider({ children }: { children: React.ReactNode }) {
 
   const enrollInClass = async (classId: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       const { error } = await supabase
         .from('enrollments')
         .insert({
+          user_id: user.id,
           class_id: classId,
           status: 'active'
         });

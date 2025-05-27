@@ -2,18 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  [contenteditable] {
-    outline: none;
-  }
-  
-  [contenteditable][placeholder]:empty:before {
-    content: attr(placeholder);
-    color: #9ca3af;
-    pointer-events: none;
-  }
-}
-
 @layer components {
   .prose {
     @apply text-gray-900;
@@ -46,4 +34,42 @@
   .prose a {
     @apply text-[#F98B3D] hover:text-[#e07a2c] underline
   }
+}
+
+/* TipTap Editor Styles */
+.ProseMirror {
+  min-height: 200px;
+  outline: none;
+}
+
+.ProseMirror p {
+  margin: 1em 0;
+}
+
+.ProseMirror > *:first-child {
+  margin-top: 0;
+}
+
+.ProseMirror > *:last-child {
+  margin-bottom: 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding: 0 1rem;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1rem;
+  font-style: italic;
+  color: #6b7280;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
 }

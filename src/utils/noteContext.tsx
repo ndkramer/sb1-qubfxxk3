@@ -1,104 +1,100 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { supabase } from './supabase';
 import { Note } from '../types';
 
 interface NoteContextType {
-  notes: Record<string, Note>;
   isLoading: boolean;
   error: string | null;
+  getNoteForModule: (moduleId: string) => Promise<Note | null>;
   saveNote: (moduleId: string, content: string) => Promise<void>;
-  deleteNote: (moduleId: string) => Promise<void>;
 }
 
 const NoteContext = createContext<NoteContextType | undefined>(undefined);
 
 export function NoteProvider({ children }: { children: React.ReactNode }) {
-  const [notes, setNotes] = useState<Record<string, Note>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadNotes();
-  }, []);
-
-  const loadNotes = async () => {
+  const getNoteForModule = useCallback(async (moduleId: string): Promise<Note | null> => {
     try {
-      const { data, error } = await supabase
+      setIsLoading(true);
+      setError(null);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data, error: fetchError } = await supabase
         .from('notes')
-        .select('*');
+        .select('*')
+        .eq('module_id', moduleId)
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (fetchError) {
+        throw new Error(fetchError.message);
+      }
 
-      const notesMap = data.reduce((acc, note) => {
-        acc[note.module_id] = note;
-        return acc;
-      }, {} as Record<string, Note>);
-
-      setNotes(notesMap);
+      return data;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load notes');
+      setError(err instanceof Error ? err.message : 'An error occurred while fetching notes');
+      return null;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const saveNote = async (moduleId: string, content: string) => {
+  const saveNote = useCallback(async (moduleId: string, content: string) => {
     try {
-      const { error } = await supabase
+      setIsLoading(true);
+      setError(null);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Use upsert to handle both insert and update cases
+      const { data, error } = await supabase
         .from('notes')
         .upsert({
           module_id: moduleId,
+          user_id: user.id,
           content,
-          last_updated: new Date().toISOString()
+          updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,module_id'
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      setNotes(prev => ({
-        ...prev,
-        [moduleId]: {
-          ...prev[moduleId],
-          content,
-          last_updated: new Date().toISOString()
-        }
-      }));
+      return data;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save note');
+      setError(err instanceof Error ? err.message : 'An error occurred while saving the note');
       throw err;
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const deleteNote = async (moduleId: string) => {
-    try {
-      const { error } = await supabase
-        .from('notes')
-        .delete()
-        .eq('module_id', moduleId);
-
-      if (error) throw error;
-
-      setNotes(prev => {
-        const newNotes = { ...prev };
-        delete newNotes[moduleId];
-        return newNotes;
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete note');
-      throw err;
-    }
-  };
+  }, []);
 
   const value = {
-    notes,
     isLoading,
     error,
+    getNoteForModule,
     saveNote,
-    deleteNote
   };
 
-  return <NoteContext.Provider value={value}>{children}</NoteContext.Provider>;
+  return (
+    <NoteContext.Provider value={value}>
+      {children}
+    </NoteContext.Provider>
+  );
 }
 
 export function useNotes() {

@@ -1,14 +1,24 @@
 import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ExternalLink } from 'lucide-react';
-import { getClassById } from '../mock/data';
+import { useClass } from '../utils/classContext';
 import ModuleCard from '../components/ModuleCard';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const ClassDetail: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
+  const { enrolledClasses, isLoading } = useClass();
   
-  const classItem = classId ? getClassById(classId) : undefined;
+  const classItem = classId ? enrolledClasses.find(c => c.id === classId) : undefined;
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <LoadingSpinner />
+      </div>
+    );
+  }
   
   if (!classItem) {
     return (
@@ -62,17 +72,17 @@ const ClassDetail: React.FC = () => {
           {/* Class Schedule */}
           <div className="mt-6">
             <h3 className="text-lg font-medium text-gray-900 mb-3">Class Schedule</h3>
-            {classItem.schedule ? (
+            {classItem.schedule_data ? (
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <p className="text-gray-700">
-                  <span className="font-medium">Dates:</span> {new Date(classItem.schedule.startDate).toLocaleDateString()} - {new Date(classItem.schedule.endDate).toLocaleDateString()}
+                  <span className="font-medium">Dates:</span> {new Date(classItem.schedule_data.startDate).toLocaleDateString()} - {new Date(classItem.schedule_data.endDate).toLocaleDateString()}
                 </p>
                 <p className="text-gray-700">
-                  <span className="font-medium">Time:</span> {classItem.schedule.startTime} - {classItem.schedule.endTime} {classItem.schedule.timeZone}
+                  <span className="font-medium">Time:</span> {classItem.schedule_data.startTime} - {classItem.schedule_data.endTime} {classItem.schedule_data.timeZone}
                 </p>
                 <p className="text-gray-700 flex items-center">
                   <span className="font-medium">Location:</span>{' '}
-                  <span>{classItem.schedule.location}</span>
+                  <span>{classItem.schedule_data.location}</span>
                   <a
                     href="https://www.one80labs.com/about"
                     target="_blank"
@@ -126,12 +136,10 @@ const ClassDetail: React.FC = () => {
             <div className="w-full md:w-2/3">
               <h3 className="text-xl font-bold text-gray-900 mb-2">{classItem.instructor}</h3>
               <p className="text-gray-700 mb-4">
-                {classItem.instructor === "Nick Kramer" ? 
-                  "Nick is a passionate educator and tech enthusiast with extensive experience in software development and AI technologies. He specializes in making complex technical concepts accessible and engaging for learners of all levels." 
-                  : classItem.instructorBio}
+                {classItem.instructorBio || 'No bio available'}
               </p>
               
-              {classItem.instructor === "Nick Kramer" && (
+              {classItem.instructor_id === "Nick Kramer" && (
                 <>
                   <div className="space-y-2 mb-6">
                     <a 

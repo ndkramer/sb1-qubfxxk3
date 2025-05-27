@@ -30,7 +30,6 @@ const ClassCard: React.FC<ClassCardProps> = ({ classItem }) => {
         </div>
       </div>
       <div className="p-4 flex flex-col h-[220px]">
-        <p className="text-gray-600 text-sm mb-2">Instructor: {classItem.instructor}</p>
         <p className="text-gray-800 line-clamp-4">{classItem.description}</p>
         <div className="mt-auto pt-4 flex justify-between items-center">
           <span className="text-sm text-gray-500">{classItem.modules.length} modules</span>

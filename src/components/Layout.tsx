@@ -3,11 +3,12 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, LogOut, Layers, User, BookOpen, ChevronRight, ChevronDown, ChevronLeft } from 'lucide-react';
 import SearchBar from './SearchBar';
 import { useAuth } from '../utils/authContext';
+import { useClass } from '../utils/classContext';
 import LoadingSpinner from './LoadingSpinner';
-import { getSortedClasses } from '../mock/data';
 
 const Layout: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
+  const { enrolledClasses, isLoading } = useClass();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -15,19 +16,19 @@ const Layout: React.FC = () => {
     const stored = localStorage.getItem('sidebarCollapsed');
     return stored ? JSON.parse(stored) : false;
   });
-  const [isLoading, setIsLoading] = useState(true);
   const [expandedClasses, setExpandedClasses] = useState<Record<string, boolean>>(() => {
     // Extract classId from URL if it exists
     const match = location.pathname.match(/\/classes\/([^\/]+)/);
-    if (match) {
-      return { [match[1]]: true };
-    }
-    return {};
+    return match ? { [match[1]]: true } : {};
   });
 
   useEffect(() => {
-    setIsLoading(false);
-  }, []);
+    // Update expanded classes when route changes
+    const match = location.pathname.match(/\/classes\/([^\/]+)/);
+    if (match) {
+      setExpandedClasses({ [match[1]]: true });
+    }
+  }, [location.pathname]);
 
   const toggleSidebar = () => {
     setSidebarCollapsed(prev => {
@@ -37,26 +38,14 @@ const Layout: React.FC = () => {
     });
   };
 
-  const toggleClass = (classId: string) => {
-    // Navigate to class page and expand the class
-    navigate(`/classes/${classId}`);
-    setExpandedClasses(prev => {
-      const wasExpanded = prev[classId];
-      return {
-        [classId]: !wasExpanded
-      };
-    });
+  const toggleClass = (classId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedClasses(prev => ({
+      ...prev,
+      [classId]: !prev[classId]
+    }));
   };
-  
-  // Update expanded classes when route changes
-  useEffect(() => {
-    const match = location.pathname.match(/\/classes\/([^\/]+)/);
-    if (match) {
-      setExpandedClasses(prev => ({
-        [match[1]]: true
-      }));
-    }
-  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -124,28 +113,26 @@ const Layout: React.FC = () => {
             </Link>
             
             {/* Enrolled Classes */}
-            {!sidebarCollapsed && <div className="mt-2 mb-1">
+            {!sidebarCollapsed && enrolledClasses.length > 0 && <div className="mt-2 mb-1">
               <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Enrolled Classes
               </h3>
             </div>}
-            {getSortedClasses().map((classItem) => (
+            {enrolledClasses.map((classItem) => (
               <div key={classItem.id}>
-                <div
-                  className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} p-3 rounded-md transition-colors duration-200 ${
+                <Link 
+                  to={`/classes/${classItem.id}`}
+                  className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} p-3 rounded-md transition-colors duration-200 cursor-pointer ${
                     isActive(`/classes/${classItem.id}`) ? 'bg-[#F98B3D] text-white' : 'text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <Link 
-                    to={`/classes/${classItem.id}`}
-                    className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'} truncate flex-grow`}
-                  >
+                  <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'} truncate flex-grow`}>
                     <ChevronRight size={16} />
                     {!sidebarCollapsed && <span className="truncate">{classItem.title}</span>}
-                  </Link>
+                  </div>
                   {!sidebarCollapsed && (
                     <button
-                      onClick={() => toggleClass(classItem.id)}
+                      onClick={(e) => toggleClass(classItem.id, e)}
                       className="ml-2"
                     >
                       <ChevronDown
@@ -156,7 +143,7 @@ const Layout: React.FC = () => {
                       />
                     </button>
                   )}
-                </div>
+                </Link>
                 
                 {!sidebarCollapsed && <div
                   className={`overflow-hidden transition-all duration-200 ${

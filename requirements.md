@@ -72,8 +72,13 @@ A modern, responsive web application for delivering educational content through 
 ### 5. Note-Taking System
 - Rich text editor with formatting options:
   - Bold, italic formatting
+  - Strike-through text
   - Bullet and numbered lists
   - Text alignment options
+  - Block quotes
+  - Keyboard shortcuts
+  - Auto-save indicator
+  - Last saved timestamp
 - Auto-saving functionality
 - Success/error state feedback
 - Module-specific notes
@@ -86,9 +91,11 @@ A modern, responsive web application for delivering educational content through 
 ### 6. Content Export
 - PDF export functionality including:
   - Module content
-  - Personal notes
+  - Rich text notes with formatting
   - Slide captures
   - Course information
+  - Instructor details
+  - Module metadata
 
 ### 7. Search Functionality
 - Global search across:
@@ -153,6 +160,7 @@ A modern, responsive web application for delivering educational content through 
 ### Frontend
 - React 18.3+
 - TypeScript 5.5+
+- TipTap for rich text editing
 - Vite build system
 - TailwindCSS for styling
 - React Router for navigation
@@ -240,11 +248,12 @@ A modern, responsive web application for delivering educational content through 
 ### Content Storage
 - Note persistence
 - User preferences
+- Rich text content storage
 - Supabase tables:
   - Users
   - Courses
   - Modules
-  - Notes
+  - Notes (with rich text content)
   - Resources
   - User preferences
 - Authentication tokens

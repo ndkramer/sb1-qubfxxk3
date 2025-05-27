@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { getSortedClasses } from '../mock/data';
+import { useClass } from '../utils/classContext';
 import ClassCard from '../components/ClassCard';
 import { Grid, List, Search, SlidersHorizontal } from 'lucide-react';
 import Button from '../components/Button';
@@ -20,33 +20,32 @@ const ClassList: React.FC = () => {
     search: '',
     instructor: ''
   });
+  const { enrolledClasses, isLoading } = useClass();
 
-  const classes = getSortedClasses();
-  
   // Get unique instructor names for filter dropdown
   const instructors = useMemo(() => {
-    return Array.from(new Set(classes.map(c => c.instructor)));
-  }, [classes]);
+    return Array.from(new Set(enrolledClasses.map(c => c.instructor_id)));
+  }, [enrolledClasses]);
 
   // Apply filters and sorting
   const filteredAndSortedClasses = useMemo(() => {
-    return classes
+    return enrolledClasses
       .filter(classItem => {
         const matchesSearch = filters.search === '' ||
           classItem.title.toLowerCase().includes(filters.search.toLowerCase()) ||
           classItem.description.toLowerCase().includes(filters.search.toLowerCase());
         
         const matchesInstructor = filters.instructor === '' ||
-          classItem.instructor === filters.instructor;
+          classItem.instructor_id === filters.instructor;
         
         return matchesSearch && matchesInstructor;
       })
       .sort((a, b) => {
         switch (sortOption) {
           case 'date-asc':
-            return new Date(a.schedule?.startDate || '').getTime() - new Date(b.schedule?.startDate || '').getTime();
+            return new Date(a.schedule_data?.startDate || '').getTime() - new Date(b.schedule_data?.startDate || '').getTime();
           case 'date-desc':
-            return new Date(b.schedule?.startDate || '').getTime() - new Date(a.schedule?.startDate || '').getTime();
+            return new Date(b.schedule_data?.startDate || '').getTime() - new Date(a.schedule_data?.startDate || '').getTime();
           case 'title-asc':
             return a.title.localeCompare(b.title);
           case 'title-desc':
@@ -55,7 +54,15 @@ const ClassList: React.FC = () => {
             return 0;
         }
       });
-  }, [classes, filters, sortOption]);
+  }, [enrolledClasses, filters, sortOption]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <div>

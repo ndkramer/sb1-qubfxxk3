@@ -9,11 +9,11 @@ export interface Class {
   id: string;
   title: string;
   description: string;
-  instructor: string;
+  instructor_id: string;
   thumbnailUrl: string;
   instructorImage?: string;
   instructorBio?: string;
-  schedule?: {
+  schedule_data?: {
     startDate: string;
     endDate: string;
     startTime: string;
@@ -46,5 +46,6 @@ export interface Note {
   userId: string;
   moduleId: string;
   content: string;
+  createdAt: string;
   lastUpdated: string;
 }

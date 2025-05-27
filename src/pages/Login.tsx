@@ -131,63 +131,6 @@ const Login: React.FC = () => {
           </div>
         </div>
       </div>
-      
-      {/* Forgot Password Modal */}
-      {showForgotPassword && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold mb-4">Reset Password</h3>
-            {resetEmailSent ? (
-              <>
-                <Alert type="success" title="Email Sent">
-                  Check your email for password reset instructions.
-                </Alert>
-                <button
-                  onClick={() => {
-                    setShowForgotPassword(false);
-                    setResetEmailSent(false);
-                  }}
-                  className="mt-4 w-full px-4 py-2 bg-[#F98B3D] text-white rounded-md hover:bg-[#e07a2c]"
-                >
-                  Close
-                </button>
-              </>
-            ) : (
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  // Call reset password function here
-                  setResetEmailSent(true);
-                } catch (error) {
-                  setError('Failed to send reset email');
-                }
-              }}>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="w-full px-4 py-2 border rounded-md mb-4"
-                  required
-                />
-                <div className="flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowForgotPassword(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-[#F98B3D] text-white rounded-md hover:bg-[#e07a2c]"
-                  >
-                    Send Reset Link
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

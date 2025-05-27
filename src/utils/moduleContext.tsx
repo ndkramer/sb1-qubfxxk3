@@ -25,9 +25,20 @@ export function ModuleProvider({ children }: { children: React.ReactNode }) {
 
   const loadModuleProgress = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user?.id) {
+        setModuleProgress({});
+        return;
+      }
+
       const { data, error } = await supabase
         .from('module_progress')
-        .select('module_id, completed');
+        .select(`
+          module_id,
+          completed
+        `)
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
@@ -46,13 +57,20 @@ export function ModuleProvider({ children }: { children: React.ReactNode }) {
 
   const updateModuleProgress = async (moduleId: string, completed: boolean) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
       const { error } = await supabase
         .from('module_progress')
-        .upsert({
+        .upsert([{
+          user_id: user.id,
           module_id: moduleId,
           completed,
           last_accessed: new Date().toISOString()
-        }, {
+        }], {
           onConflict: 'user_id,module_id'
         });
 
