@@ -24,25 +24,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-        if (!session) {
-          await handleInvalidSession();
-          return;
-        }
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {      
+      console.log('Auth state change:', event, session?.user?.id);
 
-      if (session?.user) {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsLoading(false);
+        navigate('/login');
+        return;
+      }
+      
+      if (event === 'SIGNED_IN' && session?.user) {
         setUser({
           id: session.user.id,
           email: session.user.email || '',
           name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
           avatar: session.user.user_metadata?.avatar_url
         });
-      } else {
-        await handleInvalidSession();
+        setIsLoading(false);
+        return;
       }
-      setIsLoading(false);
     });
 
     return () => {
@@ -53,66 +54,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkSession = async () => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
-      
+
       if (error) {
         console.error('Session check error:', error);
         await handleInvalidSession();
         return;
       }
 
-      if (!session) {
-        await handleInvalidSession();
-        return;
-      }
-
-      // Attempt to refresh the session
-      const { data: { session: refreshedSession }, error: refreshError } = 
-        await supabase.auth.refreshSession();
-
-      if (refreshError || !refreshedSession) {
-        console.error('Session refresh error:', refreshError);
+      if (!session?.user) {
         await handleInvalidSession();
         return;
       }
 
       setUser({
-        id: refreshedSession.user.id,
-        email: refreshedSession.user.email || '',
-        name: refreshedSession.user.user_metadata?.full_name || refreshedSession.user.email?.split('@')[0] || 'User',
-        avatar: refreshedSession.user.user_metadata?.avatar_url
+        id: session.user.id,
+        email: session.user.email || '',
+        name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+        avatar: session.user.user_metadata?.avatar_url
       });
+      setIsLoading(false);
     } catch (error) {
       console.error('Error checking session:', error);
       await handleInvalidSession();
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleInvalidSession = async () => {
     try {
+      setIsLoading(true);
       await supabase.auth.signOut();
+      setUser(null);
+      navigate('/login');
     } catch (error) {
       console.error('Error during signout:', error);
-    } finally {
       setUser(null);
-      setIsLoading(false);
       navigate('/login');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const login = async (email: string, password: string) => {
     try {
+      setIsLoading(true);
+      console.log('Starting login attempt');
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (error) {
+        console.error('Login error:', error);
+        setIsLoading(false);
         return { success: false, error: error.message };
       }
 
       if (data?.user) {
+        console.log('Login successful:', data.user.id);
         setUser({
           id: data.user.id,
           email: data.user.email || '',
@@ -122,8 +121,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: true };
       }
 
+      console.error('No user data returned from login');
+      setIsLoading(false);
       return { success: false, error: 'No user data returned' };
     } catch (error) {
+      console.error('Unexpected login error:', error);
+      setIsLoading(false);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'An unexpected error occurred' 

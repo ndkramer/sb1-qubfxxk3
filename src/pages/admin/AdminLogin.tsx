@@ -13,7 +13,7 @@ const AdminLogin: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
-  const { login, resetPassword } = useAuth();
+  const { login, resetPassword, isLoading: authLoading } = useAuth();
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
 
@@ -45,16 +45,26 @@ const AdminLogin: React.FC = () => {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!email.trim()) {
+      setError('Please enter your email address');
+      return;
+    }
+    
     setIsLoading(true);
+    console.log('Attempting password reset for:', email);
 
     try {
       const { success, error: resetError } = await resetPassword(email);
       if (success) {
+        console.log('Password reset email sent successfully');
         setResetEmailSent(true);
+        setError('');
       } else {
+        console.error('Password reset failed:', resetError);
         setError(resetError || 'Failed to send reset email');
       }
     } catch (err) {
+      console.error('Password reset error:', err);
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -110,13 +120,13 @@ const AdminLogin: React.FC = () => {
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <button
+                <span
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-[#F98B3D] hover:text-[#e07a2c]"
+                  className="text-sm text-[#F98B3D] hover:text-[#e07a2c] cursor-pointer"
                 >
                   Forgot password?
-                </button>
+                </span>
               </div>
               <input
                 id="password"
@@ -166,14 +176,16 @@ const AdminLogin: React.FC = () => {
             {resetEmailSent ? (
               <>
                 <Alert type="success" title="Email Sent">
-                  Check your email for password reset instructions.
+                  If an account exists with this email, you will receive password reset instructions.
                 </Alert>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     setShowForgotPassword(false);
                     setResetEmailSent(false);
+                    setError('');
                   }}
-                  className="mt-4 w-full px-4 py-2 bg-[#F98B3D] text-white rounded-md hover:bg-[#e07a2c]"
+                  disabled={!email.trim() || isLoading}
                 >
                   Close
                 </button>
@@ -184,20 +196,26 @@ const AdminLogin: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your admin email"
+                  placeholder="Enter your email address"
                   className="w-full px-4 py-2 border rounded-md mb-4"
                   required
                 />
                 <div className="flex justify-end space-x-3">
                   <Button
                     variant="outline"
-                    onClick={() => setShowForgotPassword(false)}
+                    onClick={() => {
+                      setResetEmailSent(false);
+                      setShowForgotPassword(false);
+                      setError('');
+                    }}
+                    type="button"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     isLoading={isLoading}
+                    disabled={!email || isLoading}
                   >
                     Send Reset Link
                   </Button>
