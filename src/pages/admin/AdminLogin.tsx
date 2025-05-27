@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../utils/authContext';
-import { useAdmin } from '../../utils/adminContext';
-import { BookOpen, AlertCircle, X } from 'lucide-react';
+import { useAdminAuth } from '../../utils/adminAuthContext';
+import { Shield, AlertCircle, X, Lock } from 'lucide-react';
 import Alert from '../../components/Alert';
 import Button from '../../components/Button';
 
@@ -13,8 +12,7 @@ const AdminLogin: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
-  const { login, resetPassword, isLoading: authLoading } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { login, resetPassword } = useAdminAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,12 +23,7 @@ const AdminLogin: React.FC = () => {
     try {
       const { success, error: loginError } = await login(email, password);
       if (success) {
-        // Check if user is admin
-        if (email === 'Nick@one80services.com') {
-          navigate('/admin/dashboard');
-        } else {
-          setError('Access denied. Admin privileges required.');
-        }
+        navigate('/admin/dashboard');
       } else {
         setError(loginError || 'Invalid email or password.');
       }
@@ -45,26 +38,23 @@ const AdminLogin: React.FC = () => {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
+    
     if (!email.trim()) {
       setError('Please enter your email address');
+      setIsLoading(false);
       return;
     }
-    
-    setIsLoading(true);
-    console.log('Attempting password reset for:', email);
 
     try {
       const { success, error: resetError } = await resetPassword(email);
       if (success) {
-        console.log('Password reset email sent successfully');
         setResetEmailSent(true);
         setError('');
       } else {
-        console.error('Password reset failed:', resetError);
         setError(resetError || 'Failed to send reset email');
       }
     } catch (err) {
-      console.error('Password reset error:', err);
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -74,17 +64,25 @@ const AdminLogin: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl overflow-hidden">
-        <div className="p-6 sm:p-8">
+        <div className="bg-[#F98B3D] p-6">
           <div className="flex justify-center mb-6">
             <div className="flex items-center space-x-2">
-              <div className="h-10 w-10 rounded-full bg-[#F98B3D] flex items-center justify-center">
-                <BookOpen size={20} className="text-white" />
+              <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center">
+                <Shield size={24} className="text-[#F98B3D]" />
               </div>
-              <span className="font-bold text-2xl text-gray-900">Admin Portal</span>
+              <span className="font-bold text-2xl text-white">Admin Portal</span>
             </div>
           </div>
+        </div>
+        <div className="p-6 sm:p-8">
+          <div className="flex items-center justify-center mb-6">
+            <Lock className="w-6 h-6 text-gray-400 mr-2" />
+            <h2 className="text-xl font-semibold text-gray-900">Secure Admin Access</h2>
+          </div>
           
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">Admin Login</h2>
+          <p className="text-center text-gray-600 mb-8">
+            Please enter your administrator credentials to continue
+          </p>
           
           {error && (
             <Alert
@@ -109,9 +107,10 @@ const AdminLogin: React.FC = () => {
                 type="email"
                 required
                 value={email}
+                autoComplete="email"
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F98B3D] focus:border-transparent"
-                placeholder="admin@example.com"
+                placeholder="Enter admin email"
               />
             </div>
             
@@ -120,43 +119,55 @@ const AdminLogin: React.FC = () => {
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <span
+                <button
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-[#F98B3D] hover:text-[#e07a2c] cursor-pointer"
+                  className="text-sm text-[#F98B3D] hover:text-[#e07a2c] cursor-pointer select-none"
                 >
                   Forgot password?
-                </span>
+                </button>
               </div>
               <input
                 id="password"
                 type="password"
                 required
                 value={password}
+                autoComplete="current-password"
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F98B3D] focus:border-transparent"
                 placeholder="••••••••"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Only authorized administrators can access this portal
+              </p>
             </div>
             
             <Button
               type="submit"
               isLoading={isLoading}
-              className="w-full"
+              className="w-full bg-[#F98B3D] hover:bg-[#e07a2c]"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
           
-          <div className="mt-6 text-center">
+          <div className="mt-8 text-center border-t pt-6">
             <Link 
               to="/login"
-              className="text-[#F98B3D] hover:text-[#e07a2c] font-medium"
+              className="inline-flex items-center text-gray-500 hover:text-gray-700"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/login', { replace: true });
+              }}
             >
-              Return to Student Login
+              <span className="mr-2">←</span>
+              Return to Student Portal
             </Link>
           </div>
         </div>
+      </div>
+      <div className="mt-4 text-center text-sm text-gray-500">
+        <p>Protected access for One80Learn administrators only</p>
       </div>
       
       {/* Forgot Password Modal */}
@@ -166,6 +177,7 @@ const AdminLogin: React.FC = () => {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">Reset Password</h3>
               <button
+                type="button"
                 onClick={() => setShowForgotPassword(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -178,17 +190,16 @@ const AdminLogin: React.FC = () => {
                 <Alert type="success" title="Email Sent">
                   If an account exists with this email, you will receive password reset instructions.
                 </Alert>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
+                <Button
+                  className="w-full mt-4"
+                  onClick={() => {
                     setShowForgotPassword(false);
                     setResetEmailSent(false);
                     setError('');
                   }}
-                  disabled={!email.trim() || isLoading}
                 >
                   Close
-                </button>
+                </Button>
               </>
             ) : (
               <form onSubmit={handleResetPassword}>
@@ -197,25 +208,25 @@ const AdminLogin: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email address"
-                  className="w-full px-4 py-2 border rounded-md mb-4"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F98B3D] focus:border-transparent mb-4"
                   required
                 />
                 <div className="flex justify-end space-x-3">
                   <Button
                     variant="outline"
+                    type="button"
                     onClick={() => {
                       setResetEmailSent(false);
                       setShowForgotPassword(false);
                       setError('');
                     }}
-                    type="button"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     isLoading={isLoading}
-                    disabled={!email || isLoading}
+                    disabled={!email.trim() || isLoading}
                   >
                     Send Reset Link
                   </Button>

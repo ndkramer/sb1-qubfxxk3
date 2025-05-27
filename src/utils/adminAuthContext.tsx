@@ -3,46 +3,47 @@ import { supabase } from './supabase';
 import { User } from '../types';
 import { useNavigate } from 'react-router-dom';
 
-interface AuthContextType {
-  user: User | null;
+interface AdminAuthContextType {
+  admin: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+export function AdminAuthProvider({ children }: { children: ReactNode }) {
+  const [admin, setAdmin] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {      
-      console.log('Auth state change:', event, session?.user?.id);
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
-        setUser(null);
+        setAdmin(null);
         setIsLoading(false);
-        navigate('/login');
+        navigate('/admin/login');
         return;
       }
       
       if (event === 'SIGNED_IN' && session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-          avatar: session.user.user_metadata?.avatar_url
-        });
+        const email = session.user.email?.toLowerCase();
+        if (email === 'nick@one80services.com') {
+          setAdmin({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || 'Admin',
+            avatar: session.user.user_metadata?.avatar_url
+          });
+        } else {
+          await handleInvalidSession();
+        }
         setIsLoading(false);
-        return;
       }
     });
 
@@ -55,23 +56,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (error) {
-        console.error('Session check error:', error);
+      if (error || !session?.user) {
         await handleInvalidSession();
         return;
       }
 
-      if (!session?.user) {
+      const email = session.user.email?.toLowerCase();
+      if (email === 'nick@one80services.com') {
+        setAdmin({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.full_name || 'Admin',
+          avatar: session.user.user_metadata?.avatar_url
+        });
+      } else {
         await handleInvalidSession();
-        return;
       }
-
-      setUser({
-        id: session.user.id,
-        email: session.user.email || '',
-        name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-        avatar: session.user.user_metadata?.avatar_url
-      });
       setIsLoading(false);
     } catch (error) {
       console.error('Error checking session:', error);
@@ -83,12 +83,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       await supabase.auth.signOut();
-      setUser(null);
-      navigate('/login');
+      setAdmin(null);
+      navigate('/admin/login');
     } catch (error) {
       console.error('Error during signout:', error);
-      setUser(null);
-      navigate('/login');
+      setAdmin(null);
+      navigate('/admin/login');
     } finally {
       setIsLoading(false);
     }
@@ -98,9 +98,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       
-      // Prevent student login with admin email
-      if (email.toLowerCase() === 'nick@one80services.com') {
-        return { success: false, error: 'Please use the admin login portal' };
+      if (email.toLowerCase() !== 'nick@one80services.com') {
+        return { success: false, error: 'Invalid admin credentials' };
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -110,59 +109,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Login error:', error);
-        setIsLoading(false);
         return { success: false, error: error.message };
       }
 
       if (data?.user) {
-        setUser({
+        setAdmin({
           id: data.user.id,
           email: data.user.email || '',
-          name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
+          name: data.user.user_metadata?.full_name || 'Admin',
           avatar: data.user.user_metadata?.avatar_url
         });
-        
         return { success: true };
       }
 
-      setIsLoading(false);
-      return { success: false, error: 'No user data returned' };
+      return { success: false, error: 'Invalid credentials' };
     } catch (error) {
       console.error('Unexpected login error:', error);
-      setIsLoading(false);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'An unexpected error occurred' 
       };
-    }
-  };
-
-  const signup = async (email: string, password: string, name: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: name
-          }
-        }
-      });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      if (data?.user) {
-        return { success: true };
-      }
-
-      return { success: false, error: 'No user data returned' };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      };
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -172,18 +140,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      console.log('Attempting password reset for:', email);
+      if (email.toLowerCase() !== 'nick@one80services.com') {
+        return { success: false, error: 'Invalid admin email' };
+      }
+
       const { error } = await supabase.auth.resetPasswordForEmail(email);
       
       if (error) {
-        console.error('Password reset error:', error);
         return { success: false, error: error.message };
       }
       
-      console.log('Password reset email sent successfully');
       return { success: true };
     } catch (error) {
-      console.error('Unexpected reset error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -211,23 +179,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const value = {
-    user,
-    isAuthenticated: !!user,
+    admin,
+    isAuthenticated: !!admin,
     isLoading,
     login,
-    signup,
     logout,
     resetPassword,
     updatePassword
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
+export function useAdminAuth() {
+  const context = useContext(AdminAuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAdminAuth must be used within an AdminAuthProvider');
   }
   return context;
 }

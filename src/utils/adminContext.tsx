@@ -28,8 +28,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const checkAdminStatus = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email === 'Nick@one80services.com') {
+      if (user?.email?.toLowerCase() === 'nick@one80services.com') {
         setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
       }
     } catch (err) {
       console.error('Error checking admin status:', err);

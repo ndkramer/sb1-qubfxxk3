@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../utils/authContext';
-import { BookOpen, AlertCircle } from 'lucide-react';
+import { GraduationCap, AlertCircle, Shield } from 'lucide-react';
 import Alert from '../components/Alert';
 
 const Login: React.FC = () => {
@@ -43,13 +43,13 @@ const Login: React.FC = () => {
           <div className="flex justify-center mb-6">
             <div className="flex items-center space-x-2">
               <div className="h-10 w-10 rounded-full bg-[#F98B3D] flex items-center justify-center">
-                <BookOpen size={20} className="text-white" />
+                <GraduationCap className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-2xl text-gray-900">One80Learn</span>
+              <span className="font-bold text-2xl text-gray-900">Student Portal</span>
             </div>
           </div>
           
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">Log in to your account</h2>
+          <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">Student Login</h2>
           
           {error && (
             <Alert
