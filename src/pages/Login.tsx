@@ -1,37 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../utils/authContext';
-import { GraduationCap, AlertCircle, Shield } from 'lucide-react';
+import { GraduationCap, AlertCircle, Loader2, Info } from 'lucide-react';
 import Alert from '../components/Alert';
+
+interface LocationState {
+  from?: { pathname: string };
+  message?: string;
+}
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetEmailSent, setResetEmailSent] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated, isInitialized } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || '/dashboard';
+  const state = location.state as LocationState;
+  const from = state?.from?.pathname || '/dashboard';
+  const message = state?.message;
+  const [showHint, setShowHint] = useState(true);
+
+  useEffect(() => {
+    // Only redirect if auth is initialized, user is authenticated, and we're on the login page
+    if (isInitialized && isAuthenticated && location.pathname === '/login') {
+      navigate(from, { replace: true });
+    }
+  }, [isInitialized, isAuthenticated, navigate, from, location.pathname]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+    console.log('Login form submitted with email:', email);
 
     try {
       const { success, error: loginError } = await login(email, password);
-      if (success) {
-        navigate(from, { replace: true });
-      } else {
+      console.log('Login attempt result:', { success, error: loginError });
+
+      if (!success) {
+        console.error('Login failed:', loginError);
         setError(loginError || 'Invalid email or password.');
+        setIsLoading(false);
       }
+      // Note: We don't need to navigate here as the useEffect will handle it
     } catch (err) {
+      console.error('Unexpected error during login:', err);
       setError('An error occurred. Please try again.');
-      console.error(err);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -51,6 +67,16 @@ const Login: React.FC = () => {
           
           <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">Student Login</h2>
           
+          {message && (
+            <Alert
+              type="success"
+              title="Success"
+              onClose={() => navigate(location.pathname, { replace: true, state: {} })}
+            >
+              {message}
+            </Alert>
+          )}
+
           {error && (
             <Alert
               type="error"
@@ -60,6 +86,19 @@ const Login: React.FC = () => {
               <div className="flex items-center">
                 <AlertCircle className="w-4 h-4 mr-2" />
                 <span>{error}</span>
+              </div>
+            </Alert>
+          )}
+
+          {showHint && (
+            <Alert
+              type="info"
+              title="Demo Login"
+              onClose={() => setShowHint(false)}
+            >
+              <div className="flex items-center">
+                <Info className="w-4 h-4 mr-2" />
+                <span>Use <strong>test@example.com</strong> / <strong>password123</strong> to log in</span>
               </div>
             </Alert>
           )}
@@ -87,7 +126,6 @@ const Login: React.FC = () => {
                 </label>
                 <button
                   type="button"
-                  onClick={() => setShowForgotPassword(true)}
                   className="text-sm text-[#F98B3D] hover:text-[#e07a2c]"
                 >
                   Forgot password?
@@ -104,17 +142,16 @@ const Login: React.FC = () => {
               />
             </div>
             
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className={`w-full py-2 px-4 bg-[#F98B3D] hover:bg-[#e07a2c] text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F98B3D] transition-colors duration-200 ${
-                  isLoading ? 'opacity-70 cursor-not-allowed' : ''
-                }`}
-              >
-                {isLoading ? 'Signing in...' : 'Sign in'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full py-2 px-4 bg-[#F98B3D] hover:bg-[#e07a2c] disabled:hover:bg-[#F98B3D] text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F98B3D] transition-colors duration-200 flex items-center justify-center ${
+                isLoading ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
+            >
+              {isLoading && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </button>
           </form>
           
           <div className="mt-6 text-center">
@@ -122,7 +159,6 @@ const Login: React.FC = () => {
               Don't have an account?{' '}
               <Link 
                 to="/signup" 
-                state={{ from }}
                 className="text-[#F98B3D] hover:text-[#e07a2c] font-medium"
               >
                 Create one
@@ -131,8 +167,11 @@ const Login: React.FC = () => {
           </div>
         </div>
       </div>
+      <div className="mt-4 text-center text-sm text-gray-500">
+        <p>Need help? Contact support at support@one80learn.com</p>
+      </div>
     </div>
   );
-};
+}
 
 export default Login;

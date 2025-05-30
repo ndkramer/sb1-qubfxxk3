@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from './supabase';
+import { useAuth } from './authContext';
 import { Module } from '../types';
 
 interface ModuleContextType {
@@ -16,39 +16,35 @@ const ModuleContext = createContext<ModuleContextType | undefined>(undefined);
 export function ModuleProvider({ children }: { children: React.ReactNode }) {
   const [currentModule, setCurrentModule] = useState<Module | null>(null);
   const [moduleProgress, setModuleProgress] = useState<Record<string, boolean>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    loadModuleProgress();
-  }, []);
+    if (isAuthenticated && user?.id) {
+      loadModuleProgress();
+    } else {
+      setModuleProgress({});
+      setIsLoading(false);
+    }
+  }, [user, isAuthenticated]);
 
   const loadModuleProgress = async () => {
+    if (!user?.id) return;
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user?.id) {
+      setIsLoading(true);
+      setError(null);
+
+      // Get progress from localStorage
+      const storedProgress = localStorage.getItem(`module_progress_${user.id}`);
+      if (storedProgress) {
+        setModuleProgress(JSON.parse(storedProgress));
+      } else {
         setModuleProgress({});
-        return;
       }
-
-      const { data, error } = await supabase
-        .from('module_progress')
-        .select(`
-          module_id,
-          completed
-        `)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      const progressMap = data.reduce((acc, curr) => {
-        acc[curr.module_id] = curr.completed;
-        return acc;
-      }, {} as Record<string, boolean>);
-
-      setModuleProgress(progressMap);
     } catch (err) {
+      console.error('Error loading module progress:', err);
       setError(err instanceof Error ? err.message : 'Failed to load module progress');
     } finally {
       setIsLoading(false);
@@ -56,30 +52,22 @@ export function ModuleProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateModuleProgress = async (moduleId: string, completed: boolean) => {
+    if (!user?.id) {
+      throw new Error('User not authenticated');
+    }
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user?.id) {
-        throw new Error('User not authenticated');
-      }
-
-      const { error } = await supabase
-        .from('module_progress')
-        .upsert([{
-          user_id: user.id,
-          module_id: moduleId,
-          completed,
-          last_accessed: new Date().toISOString()
-        }], {
-          onConflict: 'user_id,module_id'
-        });
-
-      if (error) throw error;
-
-      setModuleProgress(prev => ({
-        ...prev,
+      // Update state
+      const updatedProgress = {
+        ...moduleProgress,
         [moduleId]: completed
-      }));
+      };
+      
+      setModuleProgress(updatedProgress);
+      
+      // Save to localStorage
+      localStorage.setItem(`module_progress_${user.id}`, JSON.stringify(updatedProgress));
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update module progress');
       throw err;

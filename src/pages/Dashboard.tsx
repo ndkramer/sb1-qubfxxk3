@@ -4,7 +4,6 @@ import { useAuth } from '../utils/authContext';
 import { useClass } from '../utils/classContext';
 import ClassCard from '../components/ClassCard';
 import { ArrowRight } from 'lucide-react';
-import SearchBar from '../components/SearchBar';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const Dashboard: React.FC = () => {
@@ -48,17 +47,12 @@ const Dashboard: React.FC = () => {
       <div className="bg-gray-100 p-6 mb-8 -mx-6 -mt-6 lg:-mx-8">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-gray-900 text-2xl md:text-3xl font-bold mb-2 text-center">
-            Welcome back, {user?.name}!
+            Welcome back {user?.name}!
           </h1>
           <p className="text-gray-600 mb-4 text-center">
             Continue your learning journey. You have access to {enrolledClasses.length} classes.
           </p>
         </div>
-      </div>
-      
-      {/* Search bar */}
-      <div className="mb-8">
-        <SearchBar />
       </div>
       
       {/* Featured classes */}

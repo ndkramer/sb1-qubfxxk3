@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, LogOut, Layers, User, BookOpen, ChevronRight, ChevronDown, ChevronLeft } from 'lucide-react';
-import SearchBar from './SearchBar';
+import { Menu, X, LogOut, Layers, User, BookOpen, ChevronRight, ChevronDown, ChevronLeft, Shield, BookCopy, Library, Users } from 'lucide-react';
 import { useAuth } from '../utils/authContext';
 import { useClass } from '../utils/classContext';
 import LoadingSpinner from './LoadingSpinner';
@@ -101,7 +100,7 @@ const Layout: React.FC = () => {
             </div>
           </div>
           
-          <nav className={`mt-10 space-y-1 ${sidebarCollapsed ? 'lg:px-2' : ''}`}>
+          <nav className={`mt-10 space-y-1 ${sidebarCollapsed ? 'lg:px-2' : ''} overflow-y-auto max-h-[calc(100vh-200px)]`}>
             <Link 
               to="/dashboard" 
               className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-md transition-colors duration-200 ${
@@ -179,6 +178,62 @@ const Layout: React.FC = () => {
               <User size={20} />
               {!sidebarCollapsed && <span>Profile</span>}
             </Link>
+            
+            {/* Control Panel Section */}
+            <div className="relative">
+              <button
+                onClick={() => setExpandedClasses(prev => ({ ...prev, controlPanel: !prev.controlPanel }))}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} p-3 rounded-md transition-colors duration-200 cursor-pointer ${
+                  isActive('/admin') ? 'bg-[#F98B3D] text-white' : 'text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'} truncate flex-grow`}>
+                  <Shield size={20} />
+                  {!sidebarCollapsed && <span>Control Panel</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <ChevronDown
+                    size={16}
+                    className={`transform transition-transform duration-200 ${
+                      expandedClasses.controlPanel ? 'rotate-180' : ''
+                    }`}
+                  />
+                )}
+              </button>
+              
+              {!sidebarCollapsed && (
+                <div
+                  className={`overflow-hidden transition-all duration-200 ${
+                    expandedClasses.controlPanel ? 'max-h-48' : 'max-h-0'
+                  }`}
+                >
+                  <Link
+                    to="/admin/courses"
+                    className={`flex items-center pl-11 pr-3 py-2 transition-colors duration-200 ${
+                      isActive('/admin/courses') ? 'bg-[#F98B3D]/10 text-[#F98B3D]' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="text-sm">Courses</span>
+                  </Link>
+                  <Link
+                    to="/admin/resources"
+                    className={`flex items-center pl-11 pr-3 py-2 transition-colors duration-200 ${
+                      isActive('/admin/resources') ? 'bg-[#F98B3D]/10 text-[#F98B3D]' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="text-sm">Resources</span>
+                  </Link>
+                  <Link
+                    to="/admin/users"
+                    className={`flex items-center pl-11 pr-3 py-2 transition-colors duration-200 ${
+                      isActive('/admin/users') ? 'bg-[#F98B3D]/10 text-[#F98B3D]' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="text-sm">Users</span>
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
         </div>
         

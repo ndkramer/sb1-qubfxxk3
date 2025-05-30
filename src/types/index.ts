@@ -9,10 +9,8 @@ export interface Class {
   id: string;
   title: string;
   description: string;
-  instructor_id: string;
+  instructor: string;
   thumbnailUrl: string;
-  instructorImage?: string;
-  instructorBio?: string;
   schedule_data?: {
     startDate: string;
     endDate: string;
@@ -36,9 +34,15 @@ export interface Module {
 export interface Resource {
   id: string;
   title: string;
-  type: 'pdf' | 'link';
-  url: string;
+  type: 'pdf' | 'word' | 'excel' | 'video' | 'link';
+  url?: string;
   description?: string;
+  file_type?: string;
+  file_size?: number;
+  order?: number;
+  file_path?: string;
+  download_count?: number;
+  module_id?: string;
 }
 
 export interface Note {
@@ -46,6 +50,6 @@ export interface Note {
   userId: string;
   moduleId: string;
   content: string;
-  createdAt: string;
-  lastUpdated: string;
+  created_at: string;
+  updated_at: string;
 }

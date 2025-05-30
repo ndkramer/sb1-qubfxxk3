@@ -1,18 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Fuse from 'fuse.js';
-import { mockClasses } from '../mock/data';
-import { Class, Module } from '../types';
+import { useClass } from '../utils/classContext';
+import { useNotes } from '../utils/noteContext';
+import { Class, Module, Note } from '../types';
 
 interface SearchResult {
   item: {
     type: 'module' | 'resource' | 'note';
     title: string;
     description?: string;
+    content?: string;
     moduleId?: string;
     classId?: string;
-    content?: string;
+    noteId?: string;
   };
 }
 
@@ -22,31 +24,64 @@ const SearchBar: React.FC = () => {
   const [results, setResults] = useState<SearchResult[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { enrolledClasses } = useClass();
+  const { getAllUserNotes } = useNotes();
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadNotes = async () => {
+      try {
+        setIsLoading(true);
+        const userNotes = await getAllUserNotes();
+        setNotes(userNotes);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load notes');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadNotes();
+  }, []);
 
   // Create searchable items from all content
-  const searchableItems = mockClasses.flatMap((classItem: Class) => {
-    const moduleItems = classItem.modules?.map((module: Module) => ({
-      type: 'module' as const,
-      title: module.title,
-      description: module.description,
-      moduleId: module.id,
-      classId: classItem.id,
-      content: `${module.title} ${module.description}`
-    })) || [];
-
-    const resourceItems = classItem.modules?.flatMap(module => 
-      module.resources?.map(resource => ({
-        type: 'resource' as const,
-        title: resource.title,
-        description: resource.description || '',
+  const searchableItems = useMemo(() => {
+    const moduleItems = enrolledClasses.flatMap((classItem: Class) => {
+      const moduleItems = classItem.modules?.map((module: Module) => ({
+        type: 'module' as const,
+        title: module.title,
+        description: module.description,
         moduleId: module.id,
         classId: classItem.id,
-        content: `${resource.title} ${resource.description || ''}`
-      })) || []
-    ) || [];
+        content: `${module.title} ${module.description}`
+      })) || [];
 
-    return [...moduleItems, ...resourceItems];
-  });
+      const resourceItems = classItem.modules?.flatMap(module => 
+        module.resources?.map(resource => ({
+          type: 'resource' as const,
+          title: resource.title,
+          description: resource.description || '',
+          moduleId: module.id,
+          classId: classItem.id,
+          content: `${resource.title} ${resource.description || ''}`
+        })) || []
+      ) || [];
+
+      return [...moduleItems, ...resourceItems];
+    });
+
+    const noteItems = notes.map(note => ({
+      type: 'note' as const,
+      title: 'Note',
+      description: note.content.substring(0, 100) + '...',
+      moduleId: note.moduleId,
+      noteId: note.id,
+      content: note.content
+    }));
+
+    return [...moduleItems, ...noteItems];
+  }, [enrolledClasses, notes]);
 
   // Initialize Fuse instance
   const fuse = new Fuse(searchableItems, {
@@ -127,7 +162,7 @@ const SearchBar: React.FC = () => {
                     </p>
                   )}
                   <span className="text-xs text-[#F98B3D] mt-1 block">
-                    {result.item.type === 'module' ? 'Module' : 'Resource'}
+                    {result.item.type === 'module' ? 'Module' : result.item.type === 'resource' ? 'Resource' : 'Note'}
                   </span>
                 </div>
               </div>

@@ -1,13 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { AuthProvider, useAuth } from './utils/authContext';
-import { AdminAuthProvider, useAdminAuth } from './utils/adminAuthContext';
-import { ClassProvider } from './utils/classContext';
-import { ModuleProvider } from './utils/moduleContext';
-import { NoteProvider } from './utils/noteContext';
+import { useAuth } from './utils/authContext';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import ClassList from './pages/ClassList';
 import ClassDetail from './pages/ClassDetail';
@@ -15,13 +10,23 @@ import ModuleDetail from './pages/ModuleDetail';
 import Profile from './pages/Profile';
 import Layout from './components/Layout';
 import LoadingSpinner from './components/LoadingSpinner';
-import AdminLogin from './pages/admin/AdminLogin';
+import { ClassProvider } from './utils/classContext';
+import { ModuleProvider } from './utils/moduleContext';
+import { NoteProvider } from './utils/noteContext';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import CourseAdmin from './pages/admin/CourseAdmin';
+import ResourceAdmin from './pages/admin/ResourceAdmin';
+import UserAdmin from './pages/admin/UserAdmin';
+import ModuleAdmin from './pages/admin/ModuleAdmin';
+import ModuleResourcesPage from './pages/admin/ModuleResourcesPage';
 import AdminLayout from './pages/admin/AdminLayout';
+import { AdminAuthProvider } from './utils/adminAuthContext';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isInitialized } = useAuth();
   
-  if (isLoading) {
+  // Show loading spinner until auth is initialized and not loading
+  if (!isInitialized || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <LoadingSpinner />
@@ -29,6 +34,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
+  // Only redirect once auth is fully initialized
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
@@ -36,87 +42,55 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAdminAuth();
-  
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" />;
-  }
-  
-  return <>{children}</>;
-};
-
-const AdminRoutes = () => (
-  <AdminAuthProvider>
-    <Routes>
-      <Route path="/login" element={<AdminLogin />} />
-      <Route path="/dashboard" element={
-        <AdminProtectedRoute>
-          <AdminLayout>
-            <div>Admin Dashboard</div>
-          </AdminLayout>
-        </AdminProtectedRoute>
-      } />
-      <Route path="*" element={
-        <AdminProtectedRoute>
-          <Navigate to="/admin/dashboard\" replace />
-        </AdminProtectedRoute>
-      } />
-    </Routes>
-  </AdminAuthProvider>
-);
-
-const StudentRoutes = () => (
-  <AuthProvider>
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Layout>
-            <Outlet />
-          </Layout>
-        </ProtectedRoute>
-      }>
-        <Route index element={<Navigate to="/dashboard\" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="classes" element={<ClassList />} />
-        <Route path="classes/:classId" element={<ClassDetail />} />
-        <Route path="classes/:classId/modules/:moduleId" element={<ModuleDetail />} />
-        <Route path="profile" element={<Profile />} />
-      </Route>
-      <Route path="*" element={
-        <ProtectedRoute>
-          <Navigate to="/dashboard\" replace />
-        </ProtectedRoute>
-      } />
-    </Routes>
-  </AuthProvider>
-);
-
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/admin/*" element={<AdminRoutes />} />
-        <Route path="/*" element={
-          <ClassProvider>
-            <ModuleProvider>
-              <NoteProvider>
-                <StudentRoutes />
-              </NoteProvider>
-            </ModuleProvider>
-          </ClassProvider>
-        } />
+        {/* Auth Routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+
+        {/* Admin Routes */}
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <AdminAuthProvider>
+              <AdminLayout>
+                <Outlet />
+              </AdminLayout>
+            </AdminAuthProvider>
+          </ProtectedRoute>
+        }>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="courses" element={<CourseAdmin />} />
+          <Route path="courses/:courseId/modules" element={<ModuleAdmin />} />
+          <Route path="courses/:courseId/modules/:moduleId/resources" element={<ModuleResourcesPage />} />
+          <Route path="resources" element={<ResourceAdmin />} />
+          <Route path="users" element={<UserAdmin />} />
+        </Route>
+
+        {/* Protected User Routes */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <ClassProvider>
+              <ModuleProvider>
+                <NoteProvider>
+                  <Layout>
+                    <Outlet />
+                  </Layout>
+                </NoteProvider>
+              </ModuleProvider>
+            </ClassProvider>
+          </ProtectedRoute>
+        }>
+          <Route index element={<Navigate to="/dashboard\" replace />} />
+          <Route path="dashboard/*" element={<Dashboard />} />
+          <Route path="classes" element={<ClassList />} />
+          <Route path="classes/:classId" element={<ClassDetail />} />
+          <Route path="classes/:classId/modules/:moduleId" element={<ModuleDetail />} />
+          <Route path="profile" element={<Profile />} />
+        </Route>
+        
+        <Route path="*" element={<Navigate to="/login\" replace />} />
       </Routes>
     </Router>
   );

@@ -124,52 +124,45 @@ const ClassDetail: React.FC = () => {
       {/* Meet the Instructor */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden mt-8">
         <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Meet Your Instructor</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Meet the Instructor</h2>
           <div className="flex flex-col md:flex-row items-start gap-6">
             <div className="w-full md:w-1/3">
               <img 
-                src={classItem.instructor === "Nick Kramer" ? "https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg" : classItem.instructorImage} 
-                alt={classItem.instructor} 
+                src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg" 
+                alt={classItem.instructor}
                 className="w-full aspect-square object-cover rounded-lg"
               />
             </div>
             <div className="w-full md:w-2/3">
               <h3 className="text-xl font-bold text-gray-900 mb-2">{classItem.instructor}</h3>
               <p className="text-gray-700 mb-4">
-                {classItem.instructorBio || 'No bio available'}
+                Nick is a passionate educator and tech enthusiast with over a decade of experience in software development and AI technologies.
               </p>
               
-              {classItem.instructor_id === "Nick Kramer" && (
-                <>
-                  <div className="space-y-2 mb-6">
-                    <a 
-                      href="https://www.linkedin.com/in/nickolaskramer/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center text-[#F98B3D] hover:text-[#e07a2c]"
-                    >
-                      <span className="mr-2">LinkedIn Profile</span>
-                      <ExternalLink size={16} />
-                    </a>
-                    <p className="text-gray-700">
-                      <span className="font-medium">Email:</span> nick@one80labs.com
-                    </p>
-                    <p className="text-gray-700">
-                      <span className="font-medium">Phone:</span> (402) 915-3613
-                    </p>
-                  </div>
-                  
-                  <a 
-                    href="https://calendly.com/nickkramer" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-6 py-3 bg-[#F98B3D] text-white rounded-md hover:bg-[#e07a2c] transition-colors duration-200"
-                  >
-                    Schedule Appointment
-                    <ExternalLink size={16} className="ml-2" />
-                  </a>
-                </>
-              )}
+              <div className="space-y-2 mb-6">
+                <a 
+                  href="https://www.linkedin.com/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center text-[#F98B3D] hover:text-[#e07a2c]"
+                >
+                  <span className="mr-2">LinkedIn Profile</span>
+                  <ExternalLink size={16} />
+                </a>
+                <p className="text-gray-700">
+                  <span className="font-medium">Email:</span> instructor@example.com
+                </p>
+              </div>
+              
+              <a 
+                href="https://calendly.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-6 py-3 bg-[#F98B3D] text-white rounded-md hover:bg-[#e07a2c] transition-colors duration-200"
+              >
+                Schedule Appointment
+                <ExternalLink size={16} className="ml-2" />
+              </a>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Save, FileText, Link as LinkIcon, ExternalLink, Download, CheckCircle } from 'lucide-react';
+import { ChevronLeft, Save, FileText, Link as LinkIcon, ExternalLink, CheckCircle } from 'lucide-react';
 import { useAuth } from '../utils/authContext';
 import { useClass } from '../utils/classContext';
 import { useModule } from '../utils/moduleContext';
@@ -8,8 +8,6 @@ import { useNotes } from '../utils/noteContext';
 import RichTextEditor from '../components/RichTextEditor';
 import ErrorBoundary from '../components/ErrorBoundary';
 import SlideViewer from '../components/SlideViewer';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import Button from '../components/Button';
 import Alert from '../components/Alert';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -128,49 +126,6 @@ const ModuleDetail: React.FC = () => {
       setIsSaving(false);
     }
   };
-  
-  const handleDownload = async () => {
-    if (!module || !classItem) return;
-
-    try {
-      const pdf = new jsPDF();
-      
-      // Add title
-      pdf.setFontSize(20);
-      pdf.text(module.title, 20, 20);
-      
-      // Add module info
-      pdf.setFontSize(12);
-      pdf.text(`Module ${module.order} - ${classItem.title}`, 20, 30);
-      pdf.text(`Instructor: ${classItem.instructor_id}`, 20, 40);
-      
-      // Add slide content
-      pdf.addPage();
-      pdf.text('Slides', 20, 20);
-      const slideFrame = document.querySelector('iframe');
-      if (slideFrame) {
-        try {
-          const canvas = await html2canvas(slideFrame);
-          const imgData = canvas.toDataURL('image/png');
-          pdf.addImage(imgData, 'PNG', 20, 30, 170, 100);
-        } catch (error) {
-          console.error('Error capturing slides:', error);
-        }
-      }
-      
-      // Add notes
-      pdf.addPage();
-      pdf.text('Notes', 20, 20);
-      pdf.setFontSize(11);
-      const notes = noteContent.replace(/<[^>]+>/g, '').trim();
-      pdf.text(notes || 'No notes taken', 20, 30);
-      
-      // Save the PDF
-      pdf.save(`${module.title} - Notes and Slides.pdf`);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-    }
-  };
 
   if (classLoading) {
     return (
@@ -267,14 +222,6 @@ const ModuleDetail: React.FC = () => {
                 {noteError && (
                   <span className="text-red-600 text-sm mr-3">{noteError}</span>
                 )}
-                <Button
-                  variant="outline"
-                  onClick={handleDownload}
-                  leftIcon={<Download size={16} />}
-                  className="mr-3"
-                >
-                  Download PDF
-                </Button>
                 <Button
                   onClick={handleSaveNote}
                   isLoading={isSaving}

@@ -1,19 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../utils/authContext';
 import { BookOpen, AlertCircle, Loader2 } from 'lucide-react';
 import Alert from '../components/Alert';
+import { Info } from 'lucide-react';
 
 const Signup: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [showHint, setShowHint] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const { signup } = useAuth();
+  const { signup, isAuthenticated, isInitialized } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || '/dashboard';
+
+  useEffect(() => {
+    if (isInitialized && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isInitialized, isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,40 +30,23 @@ const Signup: React.FC = () => {
       setError('All fields are required');
       return;
     }
-    
-    if (!email || !password || !name) {
-      setError('All fields are required');
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long');
       return;
     }
 
     setIsLoading(true);
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const { success, error: signupError } = await signup(email, password, name);
+      
       if (success) {
-        // Handle success with or without email confirmation
-        if (signupError?.includes('check your email')) {
-          navigate('/login', {
-            state: {
-              from,
-              message: signupError
-            }
-          });
-        } else {
-          // Direct login if no email confirmation required
-          navigate('/login', {
-            state: {
-              from,
-              message: 'Account created successfully! Please log in.'
-            }
-          });
-        }
+        navigate('/login', {
+          state: {
+            message: 'Account created successfully! Please log in.'
+          }
+        });
       } else {
         setError(signupError || 'Failed to create account');
       }
@@ -92,6 +81,19 @@ const Signup: React.FC = () => {
               <div className="flex items-center">
                 <AlertCircle className="w-4 h-4 mr-2" />
                 <span>{error}</span>
+              </div>
+            </Alert>
+          )}
+          
+          {showHint && (
+            <Alert
+              type="info"
+              title="Demo Signup"
+              onClose={() => setShowHint(false)}
+            >
+              <div className="flex items-center">
+                <Info className="w-4 h-4 mr-2" />
+                <span>This is a demo application. You can create an account or use the test account.</span>
               </div>
             </Alert>
           )}
@@ -145,26 +147,23 @@ const Signup: React.FC = () => {
               </p>
             </div>
             
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className={`w-full py-2 px-4 bg-[#F98B3D] hover:bg-[#e07a2c] disabled:hover:bg-[#F98B3D] text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F98B3D] transition-colors duration-200 flex items-center justify-center ${
-                  isLoading ? 'opacity-70 cursor-not-allowed' : ''
-                }`}
-              >
-                {isLoading && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
-                {isLoading ? 'Creating Account...' : 'Create Account'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full py-2 px-4 bg-[#F98B3D] hover:bg-[#e07a2c] disabled:hover:bg-[#F98B3D] text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F98B3D] transition-colors duration-200 flex items-center justify-center ${
+                isLoading ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
+            >
+              {isLoading && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+            </button>
           </form>
           
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
               <Link 
-                to="/login" 
-                state={{ from }}
+                to="/login"
                 className="text-[#F98B3D] hover:text-[#e07a2c] font-medium"
               >
                 Sign in
@@ -172,6 +171,9 @@ const Signup: React.FC = () => {
             </p>
           </div>
         </div>
+      </div>
+      <div className="mt-4 text-center text-sm text-gray-500">
+        <p>Student Learning Platform</p>
       </div>
     </div>
   );
