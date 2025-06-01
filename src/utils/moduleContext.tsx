@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from './supabase';
 import { useAuth } from './authContext';
 import { Module } from '../types';
 
@@ -18,7 +19,7 @@ export function ModuleProvider({ children }: { children: React.ReactNode }) {
   const [moduleProgress, setModuleProgress] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -35,16 +36,24 @@ export function ModuleProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       setError(null);
+      
+      const { data, error } = await supabase
+        .from('module_progress')
+        .select(`
+          module_id,
+          completed
+        `)
+        .eq('user_id', user.id);
 
-      // Get progress from localStorage
-      const storedProgress = localStorage.getItem(`module_progress_${user.id}`);
-      if (storedProgress) {
-        setModuleProgress(JSON.parse(storedProgress));
-      } else {
-        setModuleProgress({});
-      }
+      if (error) throw error;
+
+      const progressMap = data.reduce((acc, curr) => {
+        acc[curr.module_id] = curr.completed;
+        return acc;
+      }, {} as Record<string, boolean>);
+
+      setModuleProgress(progressMap);
     } catch (err) {
-      console.error('Error loading module progress:', err);
       setError(err instanceof Error ? err.message : 'Failed to load module progress');
     } finally {
       setIsLoading(false);
@@ -57,16 +66,23 @@ export function ModuleProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Update state
-      const updatedProgress = {
-        ...moduleProgress,
+      const { error } = await supabase
+        .from('module_progress')
+        .upsert([{
+          user_id: user.id,
+          module_id: moduleId,
+          completed,
+          last_accessed: new Date().toISOString()
+        }], {
+          onConflict: 'user_id,module_id'
+        });
+
+      if (error) throw error;
+
+      setModuleProgress(prev => ({
+        ...prev,
         [moduleId]: completed
-      };
-      
-      setModuleProgress(updatedProgress);
-      
-      // Save to localStorage
-      localStorage.setItem(`module_progress_${user.id}`, JSON.stringify(updatedProgress));
+      }));
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update module progress');

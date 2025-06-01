@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
 import { useAuth } from '../utils/authContext';
-import { User, Camera, Mail } from 'lucide-react';
+import { User, Camera, Mail, Lock, X } from 'lucide-react';
 import Alert from '../components/Alert';
 import Button from '../components/Button';
 
 const Profile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updatePassword } = useAuth();
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
     avatar: user?.avatar || '',
   });
   const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error' | 'password-saved'>('idle');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordError, setPasswordError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -33,6 +40,41 @@ const Profile: React.FC = () => {
         }));
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { success, error } = await updatePassword(passwordData.newPassword);
+      if (success) {
+        setSaveStatus('password-saved');
+        setShowPasswordModal(false);
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        });
+      } else {
+        setPasswordError(error || 'Failed to update password');
+      }
+    } catch (error) {
+      setPasswordError('An unexpected error occurred');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -143,6 +185,10 @@ const Profile: React.FC = () => {
                   <span className="ml-4 text-green-600 text-sm">Profile updated successfully!</span>
                 )}
                 
+                {saveStatus === 'password-saved' && (
+                  <span className="ml-4 text-green-600 text-sm">Password updated successfully!</span>
+                )}
+                
                 {saveStatus === 'error' && (
                   <span className="ml-4 text-red-600 text-sm">Error updating profile!</span>
                 )}
@@ -151,6 +197,114 @@ const Profile: React.FC = () => {
           </form>
         </div>
       </div>
+      
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="p-6">
+          <h2 className="text-xl font-medium text-gray-900 mb-4">Account Settings</h2>
+          
+          <div className="space-y-4">
+            <div className="border-t border-gray-200 pt-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Password</h3>
+                <p className="text-sm text-gray-600">Update your password to keep your account secure</p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowPasswordModal(true)}
+                leftIcon={<Lock size={16} />}
+              >
+                Update Password
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Change Password</h3>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {passwordError && (
+              <Alert
+                type="error"
+                title="Error"
+                onClose={() => setPasswordError('')}
+              >
+                {passwordError}
+              </Alert>
+            )}
+            
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              <div>
+                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  Current Password
+                </label>
+                <input
+                  id="currentPassword"
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F98B3D] focus:border-transparent"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  New Password
+                </label>
+                <input
+                  id="newPassword"
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F98B3D] focus:border-transparent"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F98B3D] focus:border-transparent"
+                  required
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPasswordModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  isLoading={isSaving}
+                >
+                  Update Password
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -179,7 +179,8 @@ const Layout: React.FC = () => {
               {!sidebarCollapsed && <span>Profile</span>}
             </Link>
             
-            {/* Control Panel Section */}
+            {/* Control Panel Section - Only visible to super admins */}
+            {user?.is_super_admin && (
             <div className="relative">
               <button
                 onClick={() => setExpandedClasses(prev => ({ ...prev, controlPanel: !prev.controlPanel }))}
@@ -234,6 +235,7 @@ const Layout: React.FC = () => {
                 </div>
               )}
             </div>
+            )}
           </nav>
         </div>
         

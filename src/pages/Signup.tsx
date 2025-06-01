@@ -3,14 +3,12 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../utils/authContext';
 import { BookOpen, AlertCircle, Loader2 } from 'lucide-react';
 import Alert from '../components/Alert';
-import { Info } from 'lucide-react';
 
 const Signup: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
-  const [showHint, setShowHint] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const { signup, isAuthenticated, isInitialized } = useAuth();
   const navigate = useNavigate();
@@ -39,7 +37,7 @@ const Signup: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const { success, error: signupError } = await signup(email, password, name);
+      const { success, error: signupError } = await signup(email.trim(), password, name);
       
       if (success) {
         navigate('/login', {
@@ -50,7 +48,7 @@ const Signup: React.FC = () => {
       } else {
         setError(signupError || 'Failed to create account');
       }
-    } catch (err) {
+    } catch (err) { 
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -81,19 +79,6 @@ const Signup: React.FC = () => {
               <div className="flex items-center">
                 <AlertCircle className="w-4 h-4 mr-2" />
                 <span>{error}</span>
-              </div>
-            </Alert>
-          )}
-          
-          {showHint && (
-            <Alert
-              type="info"
-              title="Demo Signup"
-              onClose={() => setShowHint(false)}
-            >
-              <div className="flex items-center">
-                <Info className="w-4 h-4 mr-2" />
-                <span>This is a demo application. You can create an account or use the test account.</span>
               </div>
             </Alert>
           )}

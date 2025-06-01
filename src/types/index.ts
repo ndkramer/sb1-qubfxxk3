@@ -3,14 +3,18 @@ export interface User {
   name: string;
   email: string;
   avatar?: string;
+  is_super_admin?: boolean;
 }
 
 export interface Class {
   id: string;
   title: string;
   description: string;
-  instructor: string;
+  instructor_id: string;
+  instructor?: string;
   thumbnailUrl: string;
+  instructorImage?: string;
+  instructorBio?: string;
   schedule_data?: {
     startDate: string;
     endDate: string;

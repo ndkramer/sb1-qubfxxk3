@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../utils/authContext';
-import { GraduationCap, AlertCircle, Loader2, Info } from 'lucide-react';
+import { GraduationCap, AlertCircle, Loader2 } from 'lucide-react';
 import Alert from '../components/Alert';
 
 interface LocationState {
@@ -13,18 +13,16 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { login, isAuthenticated, isInitialized } = useAuth();
+  const { login, isAuthenticated, isInitialized, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState;
   const from = state?.from?.pathname || '/dashboard';
   const message = state?.message;
-  const [showHint, setShowHint] = useState(true);
 
   useEffect(() => {
-    // Only redirect if auth is initialized, user is authenticated, and we're on the login page
     if (isInitialized && isAuthenticated && location.pathname === '/login') {
+      console.log('Redirecting to:', from);
       navigate(from, { replace: true });
     }
   }, [isInitialized, isAuthenticated, navigate, from, location.pathname]);
@@ -32,23 +30,20 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
     console.log('Login form submitted with email:', email);
 
     try {
-      const { success, error: loginError } = await login(email, password);
+      const { success, error: loginError } = await login(email.trim(), password);
       console.log('Login attempt result:', { success, error: loginError });
 
       if (!success) {
         console.error('Login failed:', loginError);
         setError(loginError || 'Invalid email or password.');
-        setIsLoading(false);
       }
-      // Note: We don't need to navigate here as the useEffect will handle it
+      // Navigation is handled by the useEffect when auth state changes
     } catch (err) {
       console.error('Unexpected error during login:', err);
       setError('An error occurred. Please try again.');
-      setIsLoading(false);
     }
   };
 
@@ -90,18 +85,6 @@ const Login: React.FC = () => {
             </Alert>
           )}
 
-          {showHint && (
-            <Alert
-              type="info"
-              title="Demo Login"
-              onClose={() => setShowHint(false)}
-            >
-              <div className="flex items-center">
-                <Info className="w-4 h-4 mr-2" />
-                <span>Use <strong>test@example.com</strong> / <strong>password123</strong> to log in</span>
-              </div>
-            </Alert>
-          )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -120,17 +103,9 @@ const Login: React.FC = () => {
             </div>
             
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <button
-                  type="button"
-                  className="text-sm text-[#F98B3D] hover:text-[#e07a2c]"
-                >
-                  Forgot password?
-                </button>
-              </div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                Password
+              </label>
               <input
                 id="password"
                 type="password"
@@ -153,22 +128,10 @@ const Login: React.FC = () => {
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
-          
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link 
-                to="/signup" 
-                className="text-[#F98B3D] hover:text-[#e07a2c] font-medium"
-              >
-                Create one
-              </Link>
-            </p>
-          </div>
         </div>
       </div>
       <div className="mt-4 text-center text-sm text-gray-500">
-        <p>Need help? Contact support at support@one80learn.com</p>
+        <p>Need help? Contact support at hello@one80labs.com</p>
       </div>
     </div>
   );

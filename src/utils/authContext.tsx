@@ -1,155 +1,140 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../utils/authContext';
+import { GraduationCap, AlertCircle, Loader2 } from 'lucide-react';
+import Alert from '../components/Alert';
 
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  isInitialized: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
-  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+interface LocationState {
+  from?: { pathname: string };
+  message?: string;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const Login: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { login, isAuthenticated, isInitialized, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as LocationState;
+  const from = state?.from?.pathname || '/dashboard';
+  const message = state?.message;
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  // Check for stored session on component mount
   useEffect(() => {
-    const checkSession = () => {
-      const storedSession = localStorage.getItem('demo_session');
-      if (storedSession) {
-        try {
-          const sessionData = JSON.parse(storedSession);
-          setUser({
-            id: sessionData.id || '42ef4962-cfd0-471e-9aa4-0de3d6ca51b0',
-            email: sessionData.email || 'test@example.com',
-            name: sessionData.name || 'Test User',
-            avatar: sessionData.avatar || 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg'
-          });
-        } catch (e) {
-          console.error('Error parsing stored session:', e);
-          localStorage.removeItem('demo_session');
-        }
+    if (isAuthenticated && location.pathname === '/login') {
+      console.log('Redirecting to:', from);
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from, location.pathname]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    console.log('Login form submitted with email:', email);
+
+    try {
+      const { success, error: loginError } = await login(email.trim(), password);
+      console.log('Login attempt result:', { success, error: loginError });
+
+      if (!success) {
+        console.error('Login failed:', loginError);
+        setError(loginError || 'Invalid email or password.');
       }
-      setIsInitialized(true);
-    }
-    
-    checkSession();
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    try {
-      setIsLoading(true);
-      console.log('Attempting login for:', email);
-
-      // Check for hardcoded credentials
-      if (email === 'test@example.com' && password === 'password123') {
-        // Create user object
-        const userObj = {
-          id: '42ef4962-cfd0-471e-9aa4-0de3d6ca51b0',
-          email: 'test@example.com',
-          name: 'Test User',
-          avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg'
-        };
-        
-        // Set user in state
-        setUser(userObj);
-        
-        // Store session in localStorage
-        localStorage.setItem('demo_session', JSON.stringify(userObj));
-        console.log('Login successful for:', email);
-        return { success: true };
-      }
-      
-      console.error('Login failed: Invalid credentials');
-      return { success: false, error: 'Invalid email or password' };
-    } catch (error) {
-      console.error('Login error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'An unexpected error occurred' 
-      };
-    } finally {
-      setIsLoading(false);
+      // Navigation is handled by the useEffect when auth state changes
+    } catch (err) {
+      console.error('Unexpected error during login:', err);
+      setError('An error occurred. Please try again.');
     }
   };
 
-  const signup = async (email: string, password: string, name: string) => {
-    try {
-      setIsLoading(true);
-      
-      // For demo purposes, we'll just pretend to create an account
-      // and then log the user in
-      
-      // Create user object
-      const userObj = {
-        id: '42ef4962-cfd0-471e-9aa4-0de3d6ca51b0',
-        email,
-        name,
-        avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg'
-      };
-      
-      // Set user in state
-      setUser(userObj);
-      
-      // Store session in localStorage
-      localStorage.setItem('demo_session', JSON.stringify(userObj));
-      
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-4">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-xl overflow-hidden">
+        <div className="p-6 sm:p-8">
+          <div className="flex justify-center mb-6">
+            <div className="flex items-center space-x-2">
+              <div className="h-10 w-10 rounded-full bg-[#F98B3D] flex items-center justify-center">
+                <GraduationCap className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-bold text-2xl text-gray-900">Student Portal</span>
+            </div>
+          </div>
+          
+          <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">Student Login</h2>
+          
+          {message && (
+            <Alert
+              type="success"
+              title="Success"
+              onClose={() => navigate(location.pathname, { replace: true, state: {} })}
+            >
+              {message}
+            </Alert>
+          )}
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('demo_session');
-  };
+          {error && (
+            <Alert
+              type="error"
+              title="Authentication Error"
+              onClose={() => setError('')}
+            >
+              <div className="flex items-center">
+                <AlertCircle className="w-4 h-4 mr-2" />
+                <span>{error}</span>
+              </div>
+            </Alert>
+          )}
 
-  const resetPassword = async (email: string) => {
-    try {
-      setIsLoading(true);
-      console.log('Simulating password reset for:', email);
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    isInitialized,
-    login,
-    signup,
-    logout,
-    resetPassword
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F98B3D] focus:border-transparent"
+                placeholder="you@example.com"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F98B3D] focus:border-transparent"
+                placeholder="••••••••"
+              />
+            </div>
+            
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full py-2 px-4 bg-[#F98B3D] hover:bg-[#e07a2c] disabled:hover:bg-[#F98B3D] text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F98B3D] transition-colors duration-200 flex items-center justify-center ${
+                isLoading ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
+            >
+              {isLoading && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+        </div>
+      </div>
+      <div className="mt-4 text-center text-sm text-gray-500">
+        <p>Need help? Contact support at hello@one80labs.com</p>
+      </div>
+    </div>
+  );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
+export default Login;

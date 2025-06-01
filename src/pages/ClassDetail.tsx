@@ -61,7 +61,7 @@ const ClassDetail: React.FC = () => {
               <h1 className="text-white text-2xl md:text-3xl font-bold mb-2">
                 {classItem.title}
               </h1>
-              <p className="text-gray-200">Instructor: {classItem.instructor}</p>
+              <p className="text-gray-200">Instructor: {classItem.instructor || "Nick Kramer"}</p>
             </div>
           </div>
         </div>
@@ -129,12 +129,12 @@ const ClassDetail: React.FC = () => {
             <div className="w-full md:w-1/3">
               <img 
                 src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg" 
-                alt={classItem.instructor}
+                alt={classItem.instructor || "Nick Kramer"} 
                 className="w-full aspect-square object-cover rounded-lg"
               />
             </div>
             <div className="w-full md:w-2/3">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{classItem.instructor}</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{classItem.instructor || "Nick Kramer"}</h3>
               <p className="text-gray-700 mb-4">
                 Nick is a passionate educator and tech enthusiast with over a decade of experience in software development and AI technologies.
               </p>

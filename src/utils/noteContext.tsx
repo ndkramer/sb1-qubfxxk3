@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { supabase } from './supabase';
 import { useAuth } from './authContext';
 import { Note } from '../types';
 
@@ -24,14 +25,29 @@ export function NoteProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       setError(null);
 
-      // Get note from localStorage
-      const noteKey = `note_${user.id}_${moduleId}`;
-      const storedNote = localStorage.getItem(noteKey);
-      
-      if (storedNote) {
-        return JSON.parse(storedNote);
+      const { data, error: fetchError } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('module_id', moduleId)
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchError) {
+        throw new Error(fetchError.message);
       }
-      
+
+      if (data) {
+        return {
+          id: data.id,
+          userId: data.user_id,
+          moduleId: data.module_id,
+          content: data.content,
+          created_at: data.created_at,
+          updated_at: data.updated_at
+        };
+      }
+
       return null;
     } catch (err) {
       console.error('Error in getNoteForModule:', err);
@@ -51,26 +67,33 @@ export function NoteProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       setError(null);
 
-      const noteKey = `note_${user.id}_${moduleId}`;
-      const now = new Date().toISOString();
-      
-      const note = {
-        id: `${user.id}_${moduleId}`,
-        userId: user.id,
-        moduleId,
-        content,
-        created_at: localStorage.getItem(noteKey) ? JSON.parse(localStorage.getItem(noteKey)!).created_at : now,
-        updated_at: now
-      };
-      
-      // Save to localStorage
-      localStorage.setItem(noteKey, JSON.stringify(note));
-      
-      // Also update the notes index
-      const notesIndex = JSON.parse(localStorage.getItem(`notes_index_${user.id}`) || '[]');
-      if (!notesIndex.includes(moduleId)) {
-        notesIndex.push(moduleId);
-        localStorage.setItem(`notes_index_${user.id}`, JSON.stringify(notesIndex));
+      // Use upsert to handle both insert and update cases
+      const { data, error } = await supabase
+        .from('notes')
+        .upsert({
+          module_id: moduleId,
+          user_id: user.id,
+          content,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,module_id'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        return {
+          id: data.id,
+          userId: data.user_id,
+          moduleId: data.module_id,
+          content: data.content,
+          created_at: data.created_at,
+          updated_at: data.updated_at
+        };
       }
       
       return note;
@@ -89,21 +112,23 @@ export function NoteProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       setError(null);
 
-      // Get notes index from localStorage
-      const notesIndex = JSON.parse(localStorage.getItem(`notes_index_${user.id}`) || '[]');
-      const notes: Note[] = [];
-      
-      // Get each note
-      for (const moduleId of notesIndex) {
-        const noteKey = `note_${user.id}_${moduleId}`;
-        const storedNote = localStorage.getItem(noteKey);
-        
-        if (storedNote) {
-          notes.push(JSON.parse(storedNote));
-        }
+      const { data, error: fetchError } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (fetchError) {
+        throw new Error(fetchError.message);
       }
-      
-      return notes;
+
+      return (data || []).map(note => ({
+        id: note.id,
+        userId: note.user_id,
+        moduleId: note.module_id,
+        content: note.content,
+        created_at: note.created_at,
+        updated_at: note.updated_at
+      }));
     } catch (err) {
       console.error('Error in getAllUserNotes:', err);
       setError(err instanceof Error ? err.message : 'An error occurred while fetching notes');

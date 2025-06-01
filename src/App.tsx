@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-
 import { useAuth } from './utils/authContext';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import ClassList from './pages/ClassList';
 import ClassDetail from './pages/ClassDetail';
@@ -25,8 +26,8 @@ import { AdminAuthProvider } from './utils/adminAuthContext';
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading, isInitialized } = useAuth();
   
-  // Show loading spinner until auth is initialized and not loading
-  if (!isInitialized || isLoading) {
+  // Show loading spinner until auth is initialized
+  if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <LoadingSpinner />
@@ -49,6 +50,7 @@ function App() {
         {/* Auth Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={
@@ -90,7 +92,7 @@ function App() {
           <Route path="profile" element={<Profile />} />
         </Route>
         
-        <Route path="*" element={<Navigate to="/login\" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../utils/supabase';
 import Button from '../../components/Button';
 import Alert from '../../components/Alert';
-import { UserPlus, Search, Mail, Trash2, UserCog, X } from 'lucide-react';
+import { UserPlus, Search, Mail, Trash2, UserCog, X, RefreshCw } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { useAdminAuth } from '../../utils/adminAuthContext';
 
 interface UserData {
   id: string;
@@ -16,8 +15,6 @@ interface UserData {
 }
 
 const UserAdmin: React.FC = () => {
-  console.log('UserAdmin - Component mounted');
-  const { admin } = useAdminAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,33 +24,35 @@ const UserAdmin: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   useEffect(() => {
     loadUsers();
   }, []);
 
   const loadUsers = async () => {
-    console.log('UserAdmin - Loading users');
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users`, {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No active session');
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users`;
+      const response = await fetch(apiUrl, {
+        method: 'GET',
         headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
         },
       });
-      console.log('UserAdmin - Response status:', response.status);
 
       if (!response.ok) {
-        const error = await response.json();
-        console.error('UserAdmin - Error response:', error);
-        throw new Error(error.error || 'Failed to load users');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to load users');
       }
 
-      const { users } = await response.json();
-      console.log('UserAdmin - Users loaded:', users);
-      
-      setUsers(users);
+      const data = await response.json();
+      setUsers(data.users || []);
     } catch (err) {
-      console.error('UserAdmin - Error loading users:', err);
+      console.error('Error loading users:', err);
       setError(err instanceof Error ? err.message : 'Failed to load users');
     } finally {
       setIsLoadingUsers(false);
@@ -67,18 +66,25 @@ const UserAdmin: React.FC = () => {
     setSuccess(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users`, {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No active session');
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users`;
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
-        body: JSON.stringify({ email, fullName }),
+        body: JSON.stringify({ 
+          email, 
+          fullName: fullName.trim() || undefined 
+        })
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create user');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to create user');
       }
 
       setSuccess('User created successfully! They will receive an email to set their password.');
@@ -97,24 +103,48 @@ const UserAdmin: React.FC = () => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users`, {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No active session');
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users`;
+      const response = await fetch(apiUrl, {
         method: 'DELETE',
         headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId })
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete user');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete user');
       }
       
       setSuccess('User deleted successfully');
       loadUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user');
+    }
+  };
+
+  const handleResetPassword = async (email: string) => {
+    setIsResettingPassword(true);
+    try {
+      const redirectTo = `${window.location.origin}/reset-password`;
+      console.log('Reset password redirect URL:', redirectTo);
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo
+      });
+
+      if (error) throw error;
+      
+      setSuccess('Password reset email sent successfully');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset password email');
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -154,7 +184,6 @@ const UserAdmin: React.FC = () => {
         </div>
       </div>
 
-      {/* Create User Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
@@ -178,14 +207,13 @@ const UserAdmin: React.FC = () => {
                     htmlFor="fullName" 
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Full Name
+                    Full Name (Optional)
                   </label>
                   <input
                     id="fullName"
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    required
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F98B3D] focus:border-transparent"
                     placeholder="John Doe"
                   />
@@ -229,9 +257,8 @@ const UserAdmin: React.FC = () => {
         </div>
       )}
 
-      {/* Alerts */}
       {(error || success) && (
-        <div className="p-6">
+        <div className="mb-6">
           {error && (
             <Alert
               type="error"
@@ -254,7 +281,6 @@ const UserAdmin: React.FC = () => {
         </div>
       )}
 
-      {/* Users List */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         {isLoadingUsers ? (
           <div className="p-6 flex justify-center">
@@ -309,8 +335,17 @@ const UserAdmin: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
+                        onClick={() => handleResetPassword(user.email)}
+                        disabled={isResettingPassword}
+                        className="text-[#F98B3D] hover:text-[#e07a2c] mr-3"
+                        title="Reset password"
+                      >
+                        <Mail size={16} />
+                      </button>
+                      <button
                         onClick={() => handleDeleteUser(user.id)}
                         className="text-red-600 hover:text-red-900"
+                        title="Delete user"
                       >
                         <Trash2 size={16} />
                       </button>
