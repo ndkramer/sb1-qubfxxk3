@@ -21,6 +21,16 @@ const Login: React.FC = () => {
   const message = state?.message;
 
   useEffect(() => {
+    // CRITICAL: This redirect depends on proper RLS policies being in place.
+    // The following conditions must be met for login to work:
+    // 1. Classes, modules, and resources need read-only policies for all authenticated users
+    // 2. User-specific tables (enrollments, notes, progress) need user_id-based policies
+    // 3. RLS must be enabled on all tables
+    // 4. Avoid complex policy chains that can cause permission issues
+    //
+    // IMPORTANT: Password reset functionality should be kept separate from the login process
+    // to maintain clean separation of concerns and prevent authentication flow issues.
+    // Password reset should be handled through a dedicated route and component.
     if (isInitialized && isAuthenticated && location.pathname === '/login') {
       console.log('Redirecting to:', from);
       navigate(from, { replace: true });

@@ -1,140 +1,253 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../utils/authContext';
-import { GraduationCap, AlertCircle, Loader2 } from 'lucide-react';
-import Alert from '../components/Alert';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from './supabase';
+import { User } from '../types';
 
-interface LocationState {
-  from?: { pathname: string };
-  message?: string;
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  isInitialized: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const { login, isAuthenticated, isInitialized, isLoading } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const state = location.state as LocationState;
-  const from = state?.from?.pathname || '/dashboard';
-  const message = state?.message;
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Private helper to clear client-side session state
+  const _clearClientSession = () => {
+    setUser(null);
+    setIsLoading(false);
+    setIsInitialized(true);
+  };
 
   useEffect(() => {
-    if (isAuthenticated && location.pathname === '/login') {
-      console.log('Redirecting to:', from);
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, from, location.pathname]);
+    checkSession();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    console.log('Login form submitted with email:', email);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {      
+      console.log('Auth state change:', event, session?.user?.id);
 
-    try {
-      const { success, error: loginError } = await login(email.trim(), password);
-      console.log('Login attempt result:', { success, error: loginError });
-
-      if (!success) {
-        console.error('Login failed:', loginError);
-        setError(loginError || 'Invalid email or password.');
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        console.log('User signed out or deleted');
+        _clearClientSession();
+        return;
       }
-      // Navigation is handled by the useEffect when auth state changes
-    } catch (err) {
-      console.error('Unexpected error during login:', err);
-      setError('An error occurred. Please try again.');
+      
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+        try {
+          console.log('User signed in:', session.user.id);
+          console.log('User metadata:', session.user.user_metadata);
+          const isSuperAdmin = String(session.user.user_metadata?.is_super_admin).toLowerCase() === 'true';
+          console.log('Is super admin:', isSuperAdmin);
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+            avatar: session.user.user_metadata?.avatar_url,
+            is_super_admin: isSuperAdmin
+          });
+        } catch (error) {
+          console.error('Error updating user state:', error);
+          _clearClientSession();
+        } finally {
+          setIsLoading(false);
+          setIsInitialized(true);
+        }
+        return;
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const checkSession = async () => {
+    try {
+      setIsLoading(true);
+      const { data: { session }, error } = await supabase.auth.getSession();      
+      
+      if (error) {
+        console.error('Session check error:', error);
+        _clearClientSession();
+        return;
+      }
+
+      if (!session?.user) {
+        console.log('No active session found');
+        _clearClientSession();
+        return;
+      }
+
+      // Set user from session
+      console.log('Found existing session for user:', session.user.id);
+      console.log('Session user metadata:', session.user.user_metadata);
+      const isSuperAdmin = String(session.user.user_metadata?.is_super_admin).toLowerCase() === 'true';
+      console.log('Is super admin:', isSuperAdmin);
+      setUser({
+        id: session.user.id,
+        email: session.user.email || '',
+        name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+        avatar: session.user.user_metadata?.avatar_url,
+        is_super_admin: isSuperAdmin
+      });
+    } catch (error) {
+      console.error('Error checking session:', error);
+      _clearClientSession();
+    } finally {
+      setIsLoading(false);
+      setIsInitialized(true);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl overflow-hidden">
-        <div className="p-6 sm:p-8">
-          <div className="flex justify-center mb-6">
-            <div className="flex items-center space-x-2">
-              <div className="h-10 w-10 rounded-full bg-[#F98B3D] flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-2xl text-gray-900">Student Portal</span>
-            </div>
-          </div>
-          
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">Student Login</h2>
-          
-          {message && (
-            <Alert
-              type="success"
-              title="Success"
-              onClose={() => navigate(location.pathname, { replace: true, state: {} })}
-            >
-              {message}
-            </Alert>
-          )}
+  const login = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      console.log('Attempting login for:', email);
 
-          {error && (
-            <Alert
-              type="error"
-              title="Authentication Error"
-              onClose={() => setError('')}
-            >
-              <div className="flex items-center">
-                <AlertCircle className="w-4 h-4 mr-2" />
-                <span>{error}</span>
-              </div>
-            </Alert>
-          )}
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F98B3D] focus:border-transparent"
-                placeholder="you@example.com"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F98B3D] focus:border-transparent"
-                placeholder="••••••••"
-              />
-            </div>
-            
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`w-full py-2 px-4 bg-[#F98B3D] hover:bg-[#e07a2c] disabled:hover:bg-[#F98B3D] text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F98B3D] transition-colors duration-200 flex items-center justify-center ${
-                isLoading ? 'opacity-70 cursor-not-allowed' : ''
-              }`}
-            >
-              {isLoading && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
-              {isLoading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </form>
-        </div>
-      </div>
-      <div className="mt-4 text-center text-sm text-gray-500">
-        <p>Need help? Contact support at hello@one80labs.com</p>
-      </div>
-    </div>
-  );
+      if (error) {
+        console.error('Login error:', error);
+        setIsLoading(false);
+        return { success: false, error: error.message };
+      }
+
+      if (data?.user) {
+        console.log('Login successful for user:', data.user.id);
+        // User will be set by the auth state change event
+        setIsLoading(false);
+        return { success: true };
+      }
+
+      console.error('No user data returned from login');
+      setIsLoading(false);
+      return { success: false, error: 'No user data returned' };
+    } catch (error) {
+      console.error('Login error:', error);
+      setIsLoading(false);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'An unexpected error occurred' 
+      };
+    }
+  };
+
+  const signup = async (email: string, password: string, name: string) => {
+    try {
+      setIsLoading(true);
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name
+          }
+        }
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (data?.user) {
+        return { success: true };
+      }
+
+      return { success: false, error: 'No user data returned' };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred'
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      console.log('Checking session before logout');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log('No active session found, clearing client state only');
+        _clearClientSession();
+        return;
+      }
+
+      console.log('Active session found, logging out');
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        // Check if the error is due to an invalid session
+        if (error.message.includes('session_not_found') || error.message.includes('Session from session_id claim in JWT does not exist')) {
+          console.log('Session already invalid on server, clearing client state');
+        } else {
+          console.warn('Error during explicit logout:', error);
+        }
+      }
+      
+      // Always clear the client session state, regardless of the signOut result
+      _clearClientSession();
+    } catch (error) {
+      console.error('Unexpected error during logout:', error);
+      // Ensure client session is cleared even if there's an error
+      _clearClientSession();
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      console.log('Updating password');
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        console.error('Password update error:', error);
+        return { success: false, error: error.message };
+      }
+
+      // Don't explicitly call logout - let the auth state change handle it
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected password update error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An unexpected error occurred'
+      };
+    }
+  };
+
+  const value = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    isInitialized,
+    login,
+    signup,
+    logout,
+    updatePassword
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export default Login;
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
