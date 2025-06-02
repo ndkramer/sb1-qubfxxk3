@@ -4,7 +4,6 @@
   command = "npm run build"
   base = "/"
 
-# Handle client-side routing
 [build.environment]
   NODE_VERSION = "20"
 

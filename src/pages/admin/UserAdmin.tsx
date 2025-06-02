@@ -35,11 +35,11 @@ const UserAdmin: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No active session');
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users`;
+      const apiUrl = `${supabaseUrl}/functions/v1/manage-users`;
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
           'Content-Type': 'application/json',
         },
       });
@@ -69,11 +69,11 @@ const UserAdmin: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No active session');
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users`;
+      const apiUrl = `${supabaseUrl}/functions/v1/manage-users`;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
@@ -106,11 +106,11 @@ const UserAdmin: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No active session');
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users`;
+      const apiUrl = `${supabaseUrl}/functions/v1/manage-users`;
       const response = await fetch(apiUrl, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ userId })
@@ -131,7 +131,7 @@ const UserAdmin: React.FC = () => {
   const handleResetPassword = async (email: string) => {
     setIsResettingPassword(true);
     try {
-      const redirectTo = `${window.location.origin}/reset-password`;
+      const redirectTo = window.location.origin + '/reset-password';
       console.log('Reset password redirect URL:', redirectTo);
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {

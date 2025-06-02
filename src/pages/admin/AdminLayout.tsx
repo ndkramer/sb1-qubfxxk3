@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useMatch } from 'react-router-dom';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { Users, Layout as LayoutIcon, BookOpen, Library } from 'lucide-react';
+import { Layout as LayoutIcon, BookOpen, Library } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const AdminLayout: React.FC = () => {
@@ -56,17 +56,6 @@ const AdminLayout: React.FC = () => {
             >
               <Library size={20} />
               <span>Resources</span>
-            </Link>
-            <Link
-              to="/admin/users"
-              className={`flex items-center space-x-3 p-3 rounded-md transition-colors duration-200 ${
-                isActive('/admin/users')
-                  ? 'bg-[#F98B3D] text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <Users size={20} />
-              <span>User Admin</span>
             </Link>
           </nav>
         </div>
